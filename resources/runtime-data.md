@@ -1,0 +1,120 @@
+---
+title: Runtime data
+description: Runtime data
+---
+
+Ontime broadcasts its state over WebSockets.\
+This allows for integrations to sync to the state of the application.
+
+See below a full definition of the data that Ontime holds. \
+This data should be used in conjunction with the [Automation feature](/api/automation#using-variables-in-automation).
+
+:::tip[Show me the code]
+This documentation can get out of sync as we add new features to Ontime, \
+[see the type definition in the code here](https://github.com/cpvalente/ontime/blob/master/packages/types/src/definitions/runtime/RuntimeStore.type.ts) \
+and the instantiation of the ["empty state" here](https://github.com/cpvalente/ontime/blob/master/apps/client/src/common/stores/runtime.ts)
+:::
+
+:::note
+Ontime broadcasts messages formatted as below. \
+Where the type `Ontime` indicates the type of message, and the payload is a portion of the [Runtime data object](#runtime-data-object)
+
+```ts
+// example broadcast message from Ontime
+{ type: "ontime", payload: "<runtime-data-object>"}
+```
+
+To keep things efficient, Ontime also broadcasts the individual objects in state as they change. \
+This allows for smaller payloads and granular updates.
+```ts
+// Ontime sends smaller messages to update subsets of the object
+{ type: "ontime-timer", payload: "<runtime-data-object>.timer"}
+{ type: "ontime-offset", payload: "<runtime-data-object>.offset"}
+{ type: "ontime-eventNow", payload: "<runtime-data-object>.eventNow"}
+...
+```
+:::
+
+## Runtime data object
+:::note
+All times are in milliseconds from midnight.
+:::
+
+### ontime-clock
+Contains the server wall clock time.
+```ts
+{
+  clock: number
+}
+````
+
+### ontime-timer
+Contains data related to the application timer
+```ts
+{
+  addedTime: number                                         // time added / removed by user
+  current: number | null                                    // running countdown
+  duration: null                                            // duration of loaded event
+  elapsed: null                                             // elapsed time in current timer
+  playback: 'play' | 'pause' | 'armed' | 'stop' | 'roll'    // playback state
+  startedAt: number | null                                  // time when current timer was started
+  expectedFinish: number | null                             // time when current timer is expected to finish
+  finishedAt: number | null                                 // time when current timer reached 0
+}
+````
+
+### ontime-message
+Data related to message feature. It contains two message objects:
+Corresponding to the visibility of messages to the [stage timer view](/interface/automated/stage-timer).
+and [secondary messages](/features/secondary-message) (also displayed in the stage timer view).
+
+```ts
+timer: {
+  text: string
+  visible: boolean
+  blink: boolean
+  blackout: boolean
+  secondarySource: 'aux1' | 'aux2' | 'aux3' | 'secondary' | null
+}
+secondary: string
+````
+
+### ontime-rundown
+Contains data related to the application rundown.
+```ts
+{
+  numEvents: number                                             // number of events in rundown
+  selectedEventIndex: number | null                             // index of selected event
+  plannedStart: number                                          // schedule start time
+  plannedEnd: number | null                                     // schedule end time
+  actualStart: number | null                                    // actual start time of rundown
+  currentDay: number | null                                     // internally used to calculate day offsets
+  actualGroupStart: number | null                               // actual start time of the current group
+  offset: number | null                                         // difference between current runtime and schedule
+  expectedEnd: number | null                                    // time for expected end
+}
+````
+
+### ontime-offset
+Contains data related to the application offset.
+```ts
+{
+  absolute: number                                              // accounts for planned times
+  relative: number                                              // only counts for generated offset since start
+  mode: 'absolute' | 'relative'                                 // currently selected offset mode
+  expectedGroupEnd: number | null                               // expected end time of the current group
+  expectedRundownEnd: number | null                             // expected end time of the rundown
+  expectedFlagStart: number | null                              // expected start time of the next flagged event
+}
+````
+
+### ontime-auxtimer1 (2 and 3)
+Contains data related to the [auxiliary timer](/features/aux-timer).
+```ts
+{
+  duration: number                                              // total duration of auxiliary timer
+  current: number                                               // current value
+  playback: 'play' | 'pause' | 'stop'                           // playback state
+  direction: 'count-down' | 'count-up'                          // counting direction
+}
+````
